@@ -81,4 +81,4 @@ st.pyplot(fig5)
 
 # Footer
 st.markdown("---")
-st.markdown("✅ Built for Blinkit Strategy Intern — by [Your Name]")
+st.markdown("Built — by Ujan Pradhan")
