@@ -4,3 +4,10 @@ description = "Analyze Blinkit-like customer behavior using the Instacart Market
 
 [data]
 source_url = "https://www.kaggle.com/datasets/instacart/market-basket-analysis"
+
+[theme]
+primaryColor = "#F63366"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
