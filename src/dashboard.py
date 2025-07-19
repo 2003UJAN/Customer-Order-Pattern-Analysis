@@ -1,84 +1,49 @@
 import streamlit as st
+import plotly.express as px
 import pandas as pd
-import matplotlib.pyplot as plt
+from analysis import merge_data, generate_freq_items
 import seaborn as sns
-from analysis import download_data, load_data
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="E-Commerce Order Pattern Dashboard", layout="wide")
-sns.set(style="whitegrid")
+st.set_page_config(layout="wide", page_title="E-Commerce Order Pattern Dashboard")
 
-# Title
+df = merge_data()
+
 st.title("🛒 E-Commerce Customer Order Pattern Dashboard")
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Overview", "📈 Aisle/Dept Insights", "🧠 Association Rules", "👥 Cohort Analysis", "📆 Retention"])
 
-# Button to download data
-if st.button("🔽 Download Instacart Data"):
-    with st.spinner("Downloading data..."):
-        download_data()
-    st.success("Data downloaded!")
+with tab1:
+    st.subheader("Top 15 Most Ordered Products")
+    top_products = df['product_name'].value_counts().head(15).reset_index()
+    fig = px.bar(top_products, x='product_name', y='count', title='Most Ordered Products')
+    st.plotly_chart(fig, use_container_width=True)
 
-# Load data
-orders, products, departments, aisles, prior, train = load_data()
+    st.subheader("Department Distribution")
+    dept_counts = df['department'].value_counts().reset_index()
+    fig2 = px.pie(dept_counts, values='department', names='index', title='Orders by Department')
+    st.plotly_chart(fig2, use_container_width=True)
 
-# Merge product info
-products_full = products.merge(aisles, on='aisle_id').merge(departments, on='department_id')
+with tab2:
+    st.subheader("Top Aisles by Department")
+    aisle_dept = df.groupby(['department', 'aisle']).size().reset_index(name='count')
+    fig3 = px.treemap(aisle_dept, path=['department', 'aisle'], values='count', title='Treemap of Aisle Usage by Department')
+    st.plotly_chart(fig3, use_container_width=True)
 
-# Merge prior orders with product info
-prior_full = prior.merge(products_full, on='product_id').merge(orders, on='order_id')
+with tab3:
+    st.subheader("Association Rules (Apriori)")
+    support = st.slider("Minimum Support", min_value=0.005, max_value=0.05, value=0.01, step=0.005)
+    freq_items, rules = generate_freq_items(df, min_support=support)
+    st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
 
-st.header("📌 Key Insights")
+with tab4:
+    st.subheader("Cohort Analysis (Order Day vs Hour)")
+    cohort = df.groupby(['order_dow', 'order_hour_of_day']).size().reset_index(name='orders')
+    fig4 = px.density_heatmap(cohort, x='order_hour_of_day', y='order_dow', z='orders', nbinsx=24, nbinsy=7, title="Cohort Heatmap")
+    st.plotly_chart(fig4, use_container_width=True)
 
-# 1. Top 10 reordered products
-st.subheader("🔁 Top 10 Reordered Products")
-top_reordered = prior_full['product_name'].value_counts().head(10)
-fig1, ax1 = plt.subplots()
-sns.barplot(y=top_reordered.index, x=top_reordered.values, ax=ax1, palette='viridis')
-ax1.set_xlabel("Reorder Count")
-ax1.set_ylabel("Product Name")
-st.pyplot(fig1)
-
-# 2. Orders by Day of Week
-st.subheader("📅 Orders by Day of Week")
-dow_map = {
-    0: 'Sunday', 1: 'Monday', 2: 'Tuesday',
-    3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday'
-}
-orders['order_dow_label'] = orders['order_dow'].map(dow_map)
-dow_counts = orders['order_dow_label'].value_counts().reindex(dow_map.values())
-fig2, ax2 = plt.subplots()
-sns.barplot(x=dow_counts.index, y=dow_counts.values, ax=ax2, palette='coolwarm')
-ax2.set_xlabel("Day of Week")
-ax2.set_ylabel("Number of Orders")
-ax2.set_title("Orders Distribution by Weekday")
-st.pyplot(fig2)
-
-# 3. Orders by Hour of Day
-st.subheader("🕒 Orders by Hour of Day")
-fig3, ax3 = plt.subplots()
-sns.histplot(orders['order_hour_of_day'], bins=24, kde=False, ax=ax3, color='skyblue')
-ax3.set_xlabel("Hour of Day")
-ax3.set_ylabel("Number of Orders")
-ax3.set_title("Order Time Distribution")
-st.pyplot(fig3)
-
-# 4. Top Departments
-st.subheader("🏬 Top Departments by Number of Orders")
-top_departments = prior_full['department'].value_counts().head(10)
-fig4, ax4 = plt.subplots()
-sns.barplot(y=top_departments.index, x=top_departments.values, ax=ax4, palette='mako')
-ax4.set_xlabel("Number of Orders")
-ax4.set_ylabel("Department")
-st.pyplot(fig4)
-
-# 5. Heatmap of Day vs Hour
-st.subheader("🧭 Heatmap: Orders by Day and Hour")
-heatmap_data = orders.groupby(['order_dow', 'order_hour_of_day']).size().unstack()
-fig5, ax5 = plt.subplots(figsize=(12, 6))
-sns.heatmap(heatmap_data, cmap='YlGnBu', ax=ax5)
-ax5.set_title("Orders Heatmap: Day of Week vs Hour of Day")
-ax5.set_xlabel("Hour of Day")
-ax5.set_ylabel("Day of Week (0=Sunday)")
-st.pyplot(fig5)
-
-# Footer
-st.markdown("---")
-st.markdown("Built — by Ujan Pradhan")
+with tab5:
+    st.subheader("Customer Retention")
+    retention = df.groupby(['user_id', 'order_number'])['order_id'].count().reset_index()
+    retention = retention.groupby('order_number')['user_id'].count().reset_index()
+    fig5 = px.line(retention, x='order_number', y='user_id', title='User Retention Over Orders')
+    st.plotly_chart(fig5, use_container_width=True)
