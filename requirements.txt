@@ -1,6 +1,7 @@
-streamlit
+txt
 pandas
+numpy
+streamlit
 plotly
-matplotlib
-seaborn
 mlxtend
+scikit-learn
