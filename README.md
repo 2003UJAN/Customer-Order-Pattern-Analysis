@@ -1,31 +1,23 @@
 # 🛒 E-Commerce Customer Order Pattern Analysis
 
-This project analyzes grocery delivery order behavior using the Instacart Market Basket dataset.  
-It explores:
+# Instacart Market Basket Analysis Dashboard
 
-- Peak ordering times (day/hour)
-- Most frequently ordered items
-- Product bundling patterns using association rules
+A Streamlit dashboard that:
+- Downloads the Instacart Market Basket Analysis dataset directly from Kaggle (no big data in repo!)
+- Lets you explore peak ordering times, most popular items, and what products are frequently bought together.
 
-## 📊 Tech Stack
+## How to Use
 
-- Python (Pandas, Plotly)
-- Streamlit dashboard
-- Association Rule Mining with mlxtend
-- Dataset: Instacart Market Basket Analysis
+1. Go to https://www.kaggle.com/settings and generate/download a new Kaggle API token (kaggle.json).
+2. Install dependencies:
 
-## 📥 Dataset
-
-Download the dataset from Kaggle (you'll need a Kaggle account):
-
-🔗 [Instacart Market Basket Analysis](https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis)
-
-Place the downloaded CSV files in the `data/` folder.
-
-## ▶️ Run Locally
-
-```bash
-git clone https://github.com/2003UJAN/E-Commerce-Customer-Order-Pattern-Analysis.git
-cd blinkit-order-pattern-analysis
 pip install -r requirements.txt
-streamlit run src/dashboard.py
+
+3. Start the app:
+
+streamlit run app.py
+
+4. In the web app:
+- Upload your `kaggle.json` file
+- Click 'Download Instacart Data from Kaggle'
+- Wait for download (a few minutes the first time), then explore the tabs!
