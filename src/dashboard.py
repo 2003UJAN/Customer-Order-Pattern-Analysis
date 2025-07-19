@@ -1,59 +1,51 @@
 import streamlit as st
 import plotly.express as px
-import seaborn as sns
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 import pandas as pd
-from src.analysis import load_data, merge_data, generate_freq_items, top_products, reorder_ratio
+import matplotlib.pyplot as plt
+import seaborn as sns
+import sys
+import os
 
-st.set_page_config(layout="wide", page_title="Instacart Customer Order Analysis")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from analysis import load_data, merge_data, generate_freq_items, top_products, reorder_ratio
 
-st.title("🛒 Instacart Market Basket Analysis Dashboard")
+st.set_page_config(layout="wide", page_title="Instacart Order Pattern Dashboard")
 
-# Load and preprocess
-data = load_data()
-merged = merge_data(data)
+st.title("🛒 Instacart E-Commerce Order Analysis")
 
-st.sidebar.header("Filters")
-min_support = st.sidebar.slider("Min Support for Apriori", 0.005, 0.1, 0.02)
+with st.spinner("Loading data..."):
+    dfs = load_data()
+    merged_df = merge_data(dfs)
 
-# Top selling products
-st.subheader("📦 Top 10 Most Ordered Products")
-top_items = top_products(merged)
-st.bar_chart(top_items)
+st.sidebar.header("Navigation")
+choice = st.sidebar.radio("Select Analysis", ["Overview", "Top Products", "Reorder Ratios", "Frequent Itemsets", "Treemap"])
 
-# Reorder ratio
-st.subheader("🔁 Top 10 Reordered Products")
-reorder = reorder_ratio(merged)
-fig, ax = plt.subplots()
-sns.barplot(x=reorder.values, y=reorder.index, ax=ax)
-st.pyplot(fig)
+if choice == "Overview":
+    st.subheader("Data Overview")
+    st.dataframe(merged_df.sample(1000))
 
-# Word cloud of product names
-st.subheader("☁️ Word Cloud of Product Names")
-wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(merged['product_name']))
-fig, ax = plt.subplots()
-ax.imshow(wordcloud, interpolation='bilinear')
-ax.axis('off')
-st.pyplot(fig)
+elif choice == "Top Products":
+    st.subheader("Top Selling Products")
+    top_df = top_products(merged_df)
+    fig = px.bar(top_df, x='product_name', y='count', title="Top 10 Products", labels={'count': 'Number of Orders'})
+    st.plotly_chart(fig, use_container_width=True)
 
-# Treemap of departments and aisles
-st.subheader("📊 Treemap: Products by Department and Aisle")
-treemap_df = merged.groupby(['department', 'aisle'])['product_id'].count().reset_index()
-treemap_df.columns = ['Department', 'Aisle', 'Count']
-fig = px.treemap(treemap_df, path=['Department', 'Aisle'], values='Count', color='Department')
-st.plotly_chart(fig, use_container_width=True)
+elif choice == "Reorder Ratios":
+    st.subheader("Most Reordered Products")
+    reorder_df = reorder_ratio(merged_df)
+    fig = px.bar(reorder_df, x='product_name', y='reorder_ratio', title="Top Reordered Products")
+    st.plotly_chart(fig, use_container_width=True)
 
-# Association Rule Mining
-st.subheader("🧠 Association Rules from Apriori")
-freq_items, rules = generate_freq_items(merged, min_support=min_support)
+elif choice == "Frequent Itemsets":
+    st.subheader("Frequent Product Combinations")
+    freq_items = generate_freq_items(merged_df)
+    st.dataframe(freq_items.sort_values('support', ascending=False).head(10))
 
-st.write("Frequent Itemsets:")
-st.dataframe(freq_items.sort_values(by='support', ascending=False).head(10))
-
-st.write("Top Association Rules:")
-st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head(10))
-
-# Support vs Confidence plot
-fig = px.scatter(rules, x='support', y='confidence', size='lift', color='lift', hover_data=['antecedents', 'consequents'])
-st.plotly_chart(fig, use_container_width=True)
+elif choice == "Treemap":
+    st.subheader("Product Sales Treemap by Department")
+    dept_prod = (merged_df.groupby(['department', 'product_name'])
+                 .size()
+                 .reset_index(name='count'))
+    fig = px.treemap(dept_prod, path=['department', 'product_name'], values='count',
+                     title="Treemap of Products in Departments")
+    st.plotly_chart(fig, use_container_width=True)
