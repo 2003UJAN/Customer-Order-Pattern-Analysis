@@ -1,44 +1,58 @@
-import pandas as pd
 import os
+import pandas as pd
 
-DATA_PATH = "data"
-
-REQUIRED_FILES = [
-    "orders.csv",
-    "order_products__prior.csv",
-    "products.csv"
-]
-
-KAGGLE_LINKS = {
-    "orders.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=orders.csv",
-    "order_products__prior.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=order_products__prior.csv",
-    "products.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=products.csv"
+# File paths
+data_dir = "data"
+file_paths = {
+    "orders.csv": os.path.join(data_dir, "orders.csv"),
+    "products.csv": os.path.join(data_dir, "products.csv"),
+    "order_products__prior.csv": os.path.join(data_dir, "order_products__prior.csv"),
+    "order_products__train.csv": os.path.join(data_dir, "order_products__train.csv"),
+    "aisles.csv": os.path.join(data_dir, "aisles.csv"),
+    "departments.csv": os.path.join(data_dir, "departments.csv"),
 }
 
-def check_files_exist():
-    return [f for f in REQUIRED_FILES if not os.path.exists(os.path.join(DATA_PATH, f))]
+# Kaggle links
+file_links = {
+    "orders.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=orders.csv",
+    "products.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=products.csv",
+    "order_products__prior.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=order_products__prior.csv",
+    "order_products__train.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=order_products__train.csv",
+    "aisles.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=aisles.csv",
+    "departments.csv": "https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis/data?select=departments.csv",
+}
 
-def load_data():
-    missing_files = check_files_exist()
-    if missing_files:
-        raise FileNotFoundError(
-            f"Missing files: {', '.join(missing_files)}.\n\n"
-            f"Please download them from Kaggle and place them in the 'data/' folder:\n\n" +
-            "\n".join([f"{f}: {KAGGLE_LINKS[f]}" for f in missing_files])
-        )
+# Check missing files
+missing = [f for f, path in file_paths.items() if not os.path.exists(path)]
 
-    orders = pd.read_csv(os.path.join(DATA_PATH, "orders.csv"))
-    order_products = pd.read_csv(os.path.join(DATA_PATH, "order_products__prior.csv"))
-    products = pd.read_csv(os.path.join(DATA_PATH, "products.csv"))
-    return orders, order_products, products
+if missing:
+    print("❌ Missing files. Please download the following from Kaggle and place them in the `data/` folder:\n")
+    for f in missing:
+        print(f"- {f}: {file_links[f]}")
+    exit(1)
 
-def get_peak_order_hours(orders):
-    return orders['order_hour_of_day'].value_counts().sort_index()
+# Load all datasets
+orders = pd.read_csv(file_paths["orders.csv"])
+products = pd.read_csv(file_paths["products.csv"])
+prior = pd.read_csv(file_paths["order_products__prior.csv"])
+train = pd.read_csv(file_paths["order_products__train.csv"])
+aisles = pd.read_csv(file_paths["aisles.csv"])
+departments = pd.read_csv(file_paths["departments.csv"])
 
-def get_popular_products(order_products, products, orders, start_hour, end_hour):
-    merged = order_products.merge(orders, on="order_id").merge(products, on="product_id")
-    filtered = merged[(merged['order_hour_of_day'] >= start_hour) & (merged['order_hour_of_day'] <= end_hour)]
-    return filtered['product_name'].value_counts().head(10)
+# Sample EDA
+print("✅ Loaded all datasets successfully.")
+print("Orders shape:", orders.shape)
+print("Products shape:", products.shape)
+print("Aisles shape:", aisles.shape)
+print("Departments shape:", departments.shape)
 
-def get_bundle_size_distribution(order_products):
-    return order_products.groupby("order_id")["product_id"].count()
+top_aisles = (
+    products.merge(prior, on="product_id")
+            .merge(aisles, on="aisle_id")
+            .groupby("aisle")["order_id"].count()
+            .sort_values(ascending=False)
+            .head(5)
+)
+
+print("\nTop 5 Aisles by Order Count:")
+print(top_aisles)
