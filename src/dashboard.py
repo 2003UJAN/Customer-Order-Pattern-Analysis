@@ -5,7 +5,7 @@ from analysis import load_data
 
 st.set_page_config(page_title="Customer Order Pattern Analysis", layout="wide")
 
-st.title("📊 Blinkit-style Customer Order Pattern Analysis")
+st.title("📊 E-Commerce Customer Order Pattern Analysis")
 
 # Try loading data
 try:
