@@ -1,4 +1,17 @@
+# Byte-compiled / cache files
 __pycache__/
-*.pyc
-data/*
-!data/.gitkeep
+*.py[cod]
+*.so
+
+# Data files
+data/*.csv
+
+# Streamlit cache
+.streamlit/
+
+# Jupyter
+*.ipynb_checkpoints/
+
+# Environments
+.env
+.venv/
