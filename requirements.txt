@@ -1,8 +1,6 @@
 streamlit
 pandas
-numpy
-mlxtend
-seaborn
-matplotlib
 plotly
-wordcloud
+matplotlib
+seaborn
+mlxtend
