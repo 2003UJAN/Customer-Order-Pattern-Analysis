@@ -1,49 +1,59 @@
 import streamlit as st
 import plotly.express as px
-import pandas as pd
-from src.analysis import merge_data, generate_freq_items
 import seaborn as sns
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+import pandas as pd
+from src.analysis import load_data, merge_data, generate_freq_items, top_products, reorder_ratio
 
-st.set_page_config(layout="wide", page_title="E-Commerce Order Pattern Dashboard")
+st.set_page_config(layout="wide", page_title="Instacart Customer Order Analysis")
 
-df = merge_data()
+st.title("🛒 Instacart Market Basket Analysis Dashboard")
 
-st.title("🛒 E-Commerce Customer Order Pattern Dashboard")
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Overview", "📈 Aisle/Dept Insights", "🧠 Association Rules", "👥 Cohort Analysis", "📆 Retention"])
+# Load and preprocess
+data = load_data()
+merged = merge_data(data)
 
-with tab1:
-    st.subheader("Top 15 Most Ordered Products")
-    top_products = df['product_name'].value_counts().head(15).reset_index()
-    fig = px.bar(top_products, x='product_name', y='count', title='Most Ordered Products')
-    st.plotly_chart(fig, use_container_width=True)
+st.sidebar.header("Filters")
+min_support = st.sidebar.slider("Min Support for Apriori", 0.005, 0.1, 0.02)
 
-    st.subheader("Department Distribution")
-    dept_counts = df['department'].value_counts().reset_index()
-    fig2 = px.pie(dept_counts, values='department', names='index', title='Orders by Department')
-    st.plotly_chart(fig2, use_container_width=True)
+# Top selling products
+st.subheader("📦 Top 10 Most Ordered Products")
+top_items = top_products(merged)
+st.bar_chart(top_items)
 
-with tab2:
-    st.subheader("Top Aisles by Department")
-    aisle_dept = df.groupby(['department', 'aisle']).size().reset_index(name='count')
-    fig3 = px.treemap(aisle_dept, path=['department', 'aisle'], values='count', title='Treemap of Aisle Usage by Department')
-    st.plotly_chart(fig3, use_container_width=True)
+# Reorder ratio
+st.subheader("🔁 Top 10 Reordered Products")
+reorder = reorder_ratio(merged)
+fig, ax = plt.subplots()
+sns.barplot(x=reorder.values, y=reorder.index, ax=ax)
+st.pyplot(fig)
 
-with tab3:
-    st.subheader("Association Rules (Apriori)")
-    support = st.slider("Minimum Support", min_value=0.005, max_value=0.05, value=0.01, step=0.005)
-    freq_items, rules = generate_freq_items(df, min_support=support)
-    st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+# Word cloud of product names
+st.subheader("☁️ Word Cloud of Product Names")
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(merged['product_name']))
+fig, ax = plt.subplots()
+ax.imshow(wordcloud, interpolation='bilinear')
+ax.axis('off')
+st.pyplot(fig)
 
-with tab4:
-    st.subheader("Cohort Analysis (Order Day vs Hour)")
-    cohort = df.groupby(['order_dow', 'order_hour_of_day']).size().reset_index(name='orders')
-    fig4 = px.density_heatmap(cohort, x='order_hour_of_day', y='order_dow', z='orders', nbinsx=24, nbinsy=7, title="Cohort Heatmap")
-    st.plotly_chart(fig4, use_container_width=True)
+# Treemap of departments and aisles
+st.subheader("📊 Treemap: Products by Department and Aisle")
+treemap_df = merged.groupby(['department', 'aisle'])['product_id'].count().reset_index()
+treemap_df.columns = ['Department', 'Aisle', 'Count']
+fig = px.treemap(treemap_df, path=['Department', 'Aisle'], values='Count', color='Department')
+st.plotly_chart(fig, use_container_width=True)
 
-with tab5:
-    st.subheader("Customer Retention")
-    retention = df.groupby(['user_id', 'order_number'])['order_id'].count().reset_index()
-    retention = retention.groupby('order_number')['user_id'].count().reset_index()
-    fig5 = px.line(retention, x='order_number', y='user_id', title='User Retention Over Orders')
-    st.plotly_chart(fig5, use_container_width=True)
+# Association Rule Mining
+st.subheader("🧠 Association Rules from Apriori")
+freq_items, rules = generate_freq_items(merged, min_support=min_support)
+
+st.write("Frequent Itemsets:")
+st.dataframe(freq_items.sort_values(by='support', ascending=False).head(10))
+
+st.write("Top Association Rules:")
+st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head(10))
+
+# Support vs Confidence plot
+fig = px.scatter(rules, x='support', y='confidence', size='lift', color='lift', hover_data=['antecedents', 'consequents'])
+st.plotly_chart(fig, use_container_width=True)
