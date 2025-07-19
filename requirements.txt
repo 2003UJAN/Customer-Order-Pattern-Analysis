@@ -5,3 +5,4 @@ plotly
 mlxtend
 matplotlib
 seaborn
+altair
