@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from analysis import merge_data, generate_freq_items
+from src.analysis import merge_data, generate_freq_items
 import seaborn as sns
 import matplotlib.pyplot as plt
 
