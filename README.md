@@ -25,7 +25,7 @@ Place the downloaded CSV files in the `data/` folder.
 ## ▶️ Run Locally
 
 ```bash
-git clone https://github.com/your-username/blinkit-order-pattern-analysis.git
+git clone https://github.com/2003UJAN/E-Commerce-Customer-Order-Pattern-Analysis.git
 cd blinkit-order-pattern-analysis
 pip install -r requirements.txt
 streamlit run src/dashboard.py
