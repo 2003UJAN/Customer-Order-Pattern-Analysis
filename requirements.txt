@@ -1,1 +1,5 @@
-
+txt
+pandas
+streamlit
+plotly
+mlxtend
