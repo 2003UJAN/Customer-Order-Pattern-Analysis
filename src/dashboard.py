@@ -1,51 +1,46 @@
 import streamlit as st
 import plotly.express as px
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import sys
-import os
+from src.analysis import load_data, merge_data, reorder_ratio, top_products, generate_freq_items
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from analysis import load_data, merge_data, generate_freq_items, top_products, reorder_ratio
+st.set_page_config(page_title="E-Commerce Order Pattern Dashboard", layout="wide")
 
-st.set_page_config(layout="wide", page_title="Instacart Order Pattern Dashboard")
+st.title("🛒 E-Commerce Customer Order Pattern Dashboard")
 
-st.title("🛒 Instacart E-Commerce Order Analysis")
+# Load and merge data
+dfs = load_data()
+data = merge_data(dfs)
 
-with st.spinner("Loading data..."):
-    dfs = load_data()
-    merged_df = merge_data(dfs)
+# Sidebar Filters
+st.sidebar.header("Filter Options")
+departments = st.sidebar.multiselect("Select Department", sorted(data["department"].unique()), default=None)
+if departments:
+    data = data[data["department"].isin(departments)]
 
-st.sidebar.header("Navigation")
-choice = st.sidebar.radio("Select Analysis", ["Overview", "Top Products", "Reorder Ratios", "Frequent Itemsets", "Treemap"])
+# Top Products
+st.subheader("Top 10 Most Ordered Products")
+top = top_products(data)
+fig1 = px.bar(top, x=top.index, y=top.values, labels={"x": "Product", "y": "Order Count"})
+st.plotly_chart(fig1, use_container_width=True)
 
-if choice == "Overview":
-    st.subheader("Data Overview")
-    st.dataframe(merged_df.sample(1000))
+# Reorder Ratios
+st.subheader("Top Reordered Products")
+reorder = reorder_ratio(data).head(10)
+fig2 = px.bar(reorder, x=reorder.index, y=reorder.values, labels={"x": "Product", "y": "Reorder Ratio"})
+st.plotly_chart(fig2, use_container_width=True)
 
-elif choice == "Top Products":
-    st.subheader("Top Selling Products")
-    top_df = top_products(merged_df)
-    fig = px.bar(top_df, x='product_name', y='count', title="Top 10 Products", labels={'count': 'Number of Orders'})
-    st.plotly_chart(fig, use_container_width=True)
+# Pie Chart by Department
+st.subheader("Product Distribution by Department")
+dept_counts = data["department"].value_counts().nlargest(10)
+fig3 = px.pie(values=dept_counts.values, names=dept_counts.index)
+st.plotly_chart(fig3, use_container_width=True)
 
-elif choice == "Reorder Ratios":
-    st.subheader("Most Reordered Products")
-    reorder_df = reorder_ratio(merged_df)
-    fig = px.bar(reorder_df, x='product_name', y='reorder_ratio', title="Top Reordered Products")
-    st.plotly_chart(fig, use_container_width=True)
+# Association Rules
+st.subheader("Association Rules")
+frequent_itemsets, rules = generate_freq_items(data)
+st.dataframe(rules[["antecedents", "consequents", "support", "confidence", "lift"]].head(10))
 
-elif choice == "Frequent Itemsets":
-    st.subheader("Frequent Product Combinations")
-    freq_items = generate_freq_items(merged_df)
-    st.dataframe(freq_items.sort_values('support', ascending=False).head(10))
-
-elif choice == "Treemap":
-    st.subheader("Product Sales Treemap by Department")
-    dept_prod = (merged_df.groupby(['department', 'product_name'])
-                 .size()
-                 .reset_index(name='count'))
-    fig = px.treemap(dept_prod, path=['department', 'product_name'], values='count',
-                     title="Treemap of Products in Departments")
-    st.plotly_chart(fig, use_container_width=True)
+# Treemap by Aisle
+st.subheader("Treemap of Product Orders by Aisle")
+aisle_counts = data.groupby(["department", "aisle"]).size().reset_index(name='count')
+fig4 = px.treemap(aisle_counts, path=["department", "aisle"], values="count")
+st.plotly_chart(fig4, use_container_width=True)
