@@ -1,44 +1,60 @@
 import os
 import pandas as pd
-from kaggle.api.kaggle_api_extended import KaggleApi
+import numpy as np
+from mlxtend.frequent_patterns import apriori, association_rules
+import streamlit as st
 
-# Set Kaggle API credentials path
-os.environ['KAGGLE_CONFIG_DIR'] = os.path.join(os.getcwd(), '.kaggle')
-
-# Authenticate and download files
-def download_data():
-    api = KaggleApi()
-    api.authenticate()
-    dataset = 'psparks/instacart-market-basket-analysis'
-    files = ['aisles.csv', 'departments.csv', 'products.csv', 'orders.csv', 'order_products__prior.csv', 'order_products__train.csv']
-
-    for file in files:
-        print(f"Downloading {file}...")
-        api.dataset_download_file(dataset, file_name=file, path='data', force=True)
-
-        # Unzip the downloaded file
-        zipped_path = os.path.join('data', f"{file}.zip")
-        if os.path.exists(zipped_path):
-            import zipfile
-            with zipfile.ZipFile(zipped_path, 'r') as zip_ref:
-                zip_ref.extractall('data')
-            os.remove(zipped_path)
-
+@st.cache_data
 def load_data():
-    orders = pd.read_csv('data/orders.csv')
-    products = pd.read_csv('data/products.csv')
-    departments = pd.read_csv('data/departments.csv')
-    aisles = pd.read_csv('data/aisles.csv')
-    prior = pd.read_csv('data/order_products__prior.csv')
-    train = pd.read_csv('data/order_products__train.csv')
-    return orders, products, departments, aisles, prior, train
+    base_url = "https://www.kaggleusercontent.com/datasets/psparks/instacart-market-basket-analysis/data?select="
+    
+    files = {
+        "orders": "orders.csv",
+        "products": "products.csv",
+        "order_products_prior": "order_products__prior.csv",
+        "order_products_train": "order_products__train.csv",
+        "aisles": "aisles.csv",
+        "departments": "departments.csv"
+    }
 
-def analyze_data():
-    orders, products, departments, aisles, prior, train = load_data()
-    # Example: top 10 reordered products
-    top_products = prior.merge(products, on='product_id') \
-                        .groupby('product_name') \
-                        .size() \
-                        .sort_values(ascending=False) \
-                        .head(10)
-    return top_products
+    dataframes = {}
+    for key, file in files.items():
+        try:
+            df = pd.read_csv(f"{base_url}{file}")
+            dataframes[key] = df
+        except Exception as e:
+            st.error(f"Failed to load {file}: {e}")
+            dataframes[key] = pd.DataFrame()
+
+    return dataframes
+
+
+def merge_data(data):
+    orders = data["orders"]
+    prior = data["order_products_prior"]
+    products = data["products"]
+    aisles = data["aisles"]
+    departments = data["departments"]
+
+    merged = prior.merge(products, on='product_id', how='left') \
+                  .merge(orders, on='order_id', how='left') \
+                  .merge(aisles, on='aisle_id', how='left') \
+                  .merge(departments, on='department_id', how='left')
+    return merged
+
+
+def generate_freq_items(merged_data, min_support=0.01):
+    basket = merged_data.groupby(['order_id', 'product_name'])['add_to_cart_order'].count().unstack().fillna(0)
+    basket = basket.applymap(lambda x: 1 if x > 0 else 0)
+
+    frequent_itemsets = apriori(basket, min_support=min_support, use_colnames=True)
+    rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+    return frequent_itemsets, rules
+
+
+def top_products(merged_data, n=10):
+    return merged_data['product_name'].value_counts().head(n)
+
+
+def reorder_ratio(merged_data):
+    return merged_data.groupby('product_name')['reordered'].mean().sort_values(ascending=False).head(10)
