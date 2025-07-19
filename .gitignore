@@ -1,4 +1,4 @@
-# Byte-compiled / cache files
+# Python
 __pycache__/
 *.py[cod]
 *.so
@@ -6,12 +6,16 @@ __pycache__/
 # Data files
 data/*.csv
 
-# Streamlit cache
+# Kaggle
+.kaggle/
+data/kaggle.json
+
+# Streamlit
 .streamlit/
 
 # Jupyter
-*.ipynb_checkpoints/
+*.ipynb_checkpoints
 
-# Environments
+# Environment
 .env
-.venv/
+.venv
