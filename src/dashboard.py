@@ -1,43 +1,59 @@
 import streamlit as st
-import plotly.express as px
-from analysis import get_time_data, get_top_items, get_rules
+import pandas as pd
+import matplotlib.pyplot as plt
+from analysis import load_data
 
-st.set_page_config(page_title="Order Patterns", layout="wide")
-st.title("🛒 Customer Order Pattern Analysis")
-st.markdown("Explore Instacart data to identify order timing, popular products, and bundle patterns.")
+st.set_page_config(page_title="Customer Order Pattern Analysis", layout="wide")
 
-# Load processed data
-time_df = get_time_data()
-top_items = get_top_items()
-rules = get_rules()
+st.title("📊 Blinkit-style Customer Order Pattern Analysis")
 
-# Section: Peak Ordering Times
-st.subheader("⏰ Peak Ordering Times")
-fig1 = px.density_heatmap(
-    time_df,
-    x='order_hour_of_day',
-    y='order_dow',
-    z='order_count',
-    color_continuous_scale='Turbo',
-    labels={'order_dow': 'Day of Week', 'order_hour_of_day': 'Hour'},
-    nbinsx=24,
-    nbinsy=7
+# Try loading data
+try:
+    orders, order_products, products = load_data()
+except FileNotFoundError as e:
+    st.error(str(e))
+    st.stop()
+
+# Merge product names into ordered data
+merged = pd.merge(order_products, products, on='product_id')
+order_info = pd.merge(orders, merged, on='order_id')
+
+# Sidebar filters
+st.sidebar.title("Filters")
+selected_hour = st.sidebar.slider("Select Order Hour of Day", 0, 23, (0, 23))
+
+# Filter by hour
+filtered = order_info[
+    (order_info['order_hour_of_day'] >= selected_hour[0]) &
+    (order_info['order_hour_of_day'] <= selected_hour[1])
+]
+
+# Plot 1: Peak Order Times
+st.subheader("⏰ Peak Order Hours")
+order_hour_counts = orders['order_hour_of_day'].value_counts().sort_index()
+fig1, ax1 = plt.subplots()
+ax1.plot(order_hour_counts.index, order_hour_counts.values, marker='o')
+ax1.set_xlabel("Hour of Day")
+ax1.set_ylabel("Order Count")
+st.pyplot(fig1)
+
+# Plot 2: Popular Products
+st.subheader("🥑 Most Ordered Products (Filtered by Hour)")
+top_products = (
+    filtered['product_name']
+    .value_counts()
+    .head(10)
 )
-st.plotly_chart(fig1, use_container_width=True)
+st.bar_chart(top_products)
 
-# Section: Top Products
-st.subheader("🏆 Top 20 Most Ordered Products")
-fig2 = px.bar(
-    top_items,
-    x='order_count',
-    y='product_name',
-    orientation='h',
-    labels={'product_name': 'Product', 'order_count': 'Order Count'},
-    height=600
-)
-fig2.update_layout(yaxis={'categoryorder': 'total ascending'})
-st.plotly_chart(fig2, use_container_width=True)
+# Plot 3: Bundle Patterns
+st.subheader("🧺 Bundle Size Distribution")
+bundle_size = order_products.groupby("order_id").size()
+fig2, ax2 = plt.subplots()
+ax2.hist(bundle_size, bins=30, color="orange", edgecolor="black")
+ax2.set_xlabel("Number of Items per Order")
+ax2.set_ylabel("Number of Orders")
+st.pyplot(fig2)
 
-# Section: Association Rules
-st.subheader("🔗 Frequently Bought Together (Market Basket Rules)")
-st.dataframe(rules.style.format({'support': '{:.2%}', 'confidence': '{:.2%}', 'lift': '{:.2f}'}))
+st.markdown("---")
+st.markdown("Made with ❤️ for Blinkit Internship")
