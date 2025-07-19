@@ -1,7 +1,0 @@
-__pycache__/
-*.pyc
-*.pkl
-*.h5
-.env
-.kaggle/kaggle.json
-data/*.csv
