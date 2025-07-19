@@ -1,59 +1,34 @@
 import streamlit as st
-import pandas as pd
+from analysis import load_data, get_peak_order_hours, get_popular_products, get_bundle_size_distribution
 import matplotlib.pyplot as plt
-from analysis import load_data
 
-st.set_page_config(page_title="Customer Order Pattern Analysis", layout="wide")
+st.set_page_config(page_title="Instacart Order Insights", layout="wide")
 
-st.title("📊 E-Commerce Customer Order Pattern Analysis")
+st.title("🛒 E-Commerce-Customer-Order-Pattern-Analysis Dashboard")
 
-# Try loading data
 try:
     orders, order_products, products = load_data()
+    st.success("Data loaded successfully!")
+
+    st.subheader("🕒 Peak Order Hours")
+    peak_hours = get_peak_order_hours(orders)
+    st.bar_chart(peak_hours)
+
+    st.subheader("🔥 Top Products Ordered (By Hour Range)")
+    col1, col2 = st.columns(2)
+    with col1:
+        start_hour = st.slider("Start Hour", 0, 23, 8)
+    with col2:
+        end_hour = st.slider("End Hour", 0, 23, 17)
+
+    top_products = get_popular_products(order_products, products, orders, start_hour, end_hour)
+    st.dataframe(top_products.reset_index().rename(columns={'index': 'Product', 'product_name': 'Order Count'}))
+
+    st.subheader("📦 Bundle Size Distribution (Items per Order)")
+    bundle_sizes = get_bundle_size_distribution(order_products)
+    fig, ax = plt.subplots()
+    bundle_sizes.hist(bins=30, ax=ax)
+    st.pyplot(fig)
+
 except FileNotFoundError as e:
     st.error(str(e))
-    st.stop()
-
-# Merge product names into ordered data
-merged = pd.merge(order_products, products, on='product_id')
-order_info = pd.merge(orders, merged, on='order_id')
-
-# Sidebar filters
-st.sidebar.title("Filters")
-selected_hour = st.sidebar.slider("Select Order Hour of Day", 0, 23, (0, 23))
-
-# Filter by hour
-filtered = order_info[
-    (order_info['order_hour_of_day'] >= selected_hour[0]) &
-    (order_info['order_hour_of_day'] <= selected_hour[1])
-]
-
-# Plot 1: Peak Order Times
-st.subheader("⏰ Peak Order Hours")
-order_hour_counts = orders['order_hour_of_day'].value_counts().sort_index()
-fig1, ax1 = plt.subplots()
-ax1.plot(order_hour_counts.index, order_hour_counts.values, marker='o')
-ax1.set_xlabel("Hour of Day")
-ax1.set_ylabel("Order Count")
-st.pyplot(fig1)
-
-# Plot 2: Popular Products
-st.subheader("🥑 Most Ordered Products (Filtered by Hour)")
-top_products = (
-    filtered['product_name']
-    .value_counts()
-    .head(10)
-)
-st.bar_chart(top_products)
-
-# Plot 3: Bundle Patterns
-st.subheader("🧺 Bundle Size Distribution")
-bundle_size = order_products.groupby("order_id").size()
-fig2, ax2 = plt.subplots()
-ax2.hist(bundle_size, bins=30, color="orange", edgecolor="black")
-ax2.set_xlabel("Number of Items per Order")
-ax2.set_ylabel("Number of Orders")
-st.pyplot(fig2)
-
-st.markdown("---")
-st.markdown("Made with ❤️ for Blinkit Internship")
