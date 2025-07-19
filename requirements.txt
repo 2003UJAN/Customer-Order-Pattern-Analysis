@@ -1,7 +1,5 @@
-txt
-pandas
-numpy
 streamlit
-plotly
+kaggle
+pandas
+matplotlib
 mlxtend
-scikit-learn
