@@ -1,16 +1,11 @@
-[project]
-name = "Customer Order Pattern Analysis"
-description = "Analyze Blinkit-like customer behavior using the Instacart Market Basket Analysis dataset"
-
-[data]
-source_url = "https://www.kaggle.com/datasets/instacart/market-basket-analysis"
-
 [server]
 headless = true
-port = 8501
 enableCORS = false
+port = 8501
 
 [theme]
-base="light"
-primaryColor="#00A36C"
-font="sans serif"
+primaryColor = "#4CAF50"
+backgroundColor = "#F5F5F5"
+secondaryBackgroundColor = "#E0E0E0"
+textColor = "#000000"
+font = "sans serif"
