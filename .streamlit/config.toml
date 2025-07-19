@@ -5,6 +5,11 @@ description = "Analyze Blinkit-like customer behavior using the Instacart Market
 [data]
 source_url = "https://www.kaggle.com/datasets/instacart/market-basket-analysis"
 
+[server]
+headless = true
+port = 8501
+enableCORS = false
+
 [theme]
 base="light"
 primaryColor="#00A36C"
