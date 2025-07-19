@@ -1,21 +1,10 @@
-# Python
 __pycache__/
 *.py[cod]
 *.so
-
-# Data files
-data/*.csv
-
-# Kaggle
-.kaggle/
-data/kaggle.json
-
-# Streamlit
-.streamlit/
-
-# Jupyter
-*.ipynb_checkpoints
-
-# Environment
+*.env
+.venv/
 .env
-.venv
+data/*.csv
+.kaggle/
+.streamlit/
+*.ipynb_checkpoints/
