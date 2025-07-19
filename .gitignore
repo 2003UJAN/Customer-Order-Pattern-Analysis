@@ -1,20 +1,5 @@
-# Python
-*.pyc
 __pycache__/
-
-# Virtual env
-.venv/
-env/
-venv/
-
-# Jupyter
-.ipynb_checkpoints
-
-# Streamlit
-.streamlit/config.toml
-.cache/
-**/.mypy_cache/
-
-# Kaggle API Key
-kaggle.json
+*.pyc
 .kaggle/
+.env
+*.ipynb_checkpoints
